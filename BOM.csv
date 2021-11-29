@@ -1,0 +1,5 @@
+name-version.extension*,license*,copyrights*,end-of-support,dependencies,language,repository,email,URL
+jackson-core-asl-1.9.9.redhat-4.jar,"Apache-2.0",redhat,,,Java,,,
+silos-jeff-1.1.0.jar,"Apache-2.0; MIT (Rilasciata da CSI Piemonte su richiesta)",csipiemonte,,,Java,,,
+silos-jedi-1.1.1.jar,"Apache-2.0; MIT (Rilasciata da CSI Piemonte su richiesta)",csipiemonte,,,Java,,,
+junit-4.7.jar,"CPL-1.0",others,,,Java,,,

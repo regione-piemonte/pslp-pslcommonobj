@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+
+<!-- ################################################# -->
+<!-- # Copyright Regione Piemonte - 2021		 	 # -->
+<!-- # SPDX-License-Identifier: EUPL-1.2-or-later	 # -->
+<!-- #							 					 # -->
+<!-- ################################################# -->
+
+<project name="pslcommonobj - catalogo oggetti comuni in PSLP" xmlns:ivy="antlib:fr.jayasoft.ivy.ant" default="distribution">
+	<description>Build file di progetto</description>
+
+	<echo message="Loading build properties..." />
+	<property file="buildfiles/build.properties" />
+	<property file="buildfiles/${target}.properties" />
+	<property file="buildfiles/jfrog.properties" />
+	<property name="dist_tmp_ejbc" location="${dist}/tmp/ejbc" />
+	<property file="build_user_junit.properties" />
+
+	<path id="library.ref">
+		<fileset dir="${lib}">
+			<include name="**/*.jar" />
+			<include name="**/*.zip" />
+		</fileset>
+		<pathelement location="${build}/classes" />
+	</path>
+
+	<property name="src" location="src" />
+	<property name="test" location="test" />
+
+	<!-- ================= -->
+	<!-- INIZIO PROPERTIES -->
+	<!-- ================= -->
+
+	<!-- Esegue il build per l'environment specificato a linea di comando con -Dtarget=${target} o per tutti gli environment (se non specificato) -->
+	<target name="default" description="Esegue il build per l'environment specificato a linea di comando con -Dtarget=${target} o per tutti gli environment (se non specificato).">
+		<condition property="first-call" value="distribution">
+			<not>
+				<equals arg1="${target}" arg2="$${target}" />
+			</not>
+		</condition>
+		<condition property="first-call" value="all-targets">
+			<equals arg1="${target}" arg2="$${target}" />
+		</condition>
+		<echo message="target: ${target}" />
+		<echo message="first-call: ${first-call}" />
+
+		<antcall target="${first-call}" />
+	</target>
+
+	<!-- Inizializza lo script Ant -->
+	<target name="init" description="Inizializza lo script Ant.">
+		<tstamp />
+		<property environment="env" />
+		<condition property="target" value="tst-rp-01">
+			<equals arg1="${target}" arg2="$${target}" />
+		</condition>
+		<mkdir dir="${build}/classes" />
+		<mkdir dir="${build}/meta-inf" />
+		<mkdir dir="${build}/temp/${target}/lib" />
+		<mkdir dir="${build}/archives/${target}" />
+		<mkdir dir="${dist}/${target}" />
+		<mkdir dir="${build}/javadoc" />
+	</target>
+
+	<!-- Target per ivy che si occupa di caricare i files di configurazione -->
+	<target name="resolve-dependencies" description="Configurazione di ivy" depends="init">
+		<ivy:configure file="buildfiles/ivyconf.xml" />
+		<ivy:resolve file="buildfiles/ivy.xml" />
+	</target>
+
+	<!-- Target per ivy che si occupa di copiare i files dalla cache nella lib-->
+	<target name="load-dependencies" depends="resolve-dependencies">
+		<!-- delete dir="lib" / -->
+
+		<ivy:retrieve pattern="lib/[artifact].[type]" />
+		<!--<copy todir="lib">
+			<fileset file="conf/lib-tmp/*.jar" />
+		</copy>
+		-->
+	</target>
+
+	<target name="javadoc" description="Crea la javadoc delle interfacce client">
+		<delete dir="build/javadoc" />
+		<mkdir dir="build/javadoc" />
+		<javadoc packagenames="it.csi.silpcommonobj.dati.*" sourcepath="src/java" destdir="build/javadoc" private="true">
+			<classpath refid="library.ref" />
+			<doclet name="gr.spinellis.umlgraph.doclet.UmlGraphDoc" path="conf/lib-tmp/UmlGraph-4.8.0.jar">
+				<param name="-attributes" />
+				<param name="-inferrel" />
+				<param name="-inferdep" />
+				<param name="-hide" value="java.*" />
+				<param name="-collpackages" value="java.util.*" />
+				<param name="-qualify" />
+				<param name="-postfixpackage" />
+				<param name="-nodefontsize" value="9" />
+				<param name="-nodefontpackagesize" value="7" />
+				<param name="-link" value="http://<sitoweb>/java/docs/silos/silcommon/javadoc/" />
+			</doclet>
+		</javadoc>
+	</target>
+
+	<target name="clean-all" description="Svuota tutti i files generati" depends="init">
+		<delete failonerror="no" dir="${build}/classes" />
+		<delete failonerror="no" dir="${build}/archives" />
+		<delete failonerror="no" dir="${dist}" />
+	</target>
+
+	<target name="compile-all" description="Compila tutti i sorgenti." depends="init, load-dependencies">
+
+		<echo message="===> Target: ${target}" />
+
+		<mkdir dir="${build}/classes"/>
+		<javac srcdir="${src}/java" destdir="${build}/classes" optimize="on" deprecation="on" source="1.5" target="1.5" compiler="modern" debug="on" debuglevel="lines,vars,source">
+			<classpath refid="library.ref" />
+		</javac>
+
+		<copy todir="${build}/classes">
+			<fileset dir="${src}/java" excludes="**/*.java*,**/*.jbx*" />
+		</copy>
+
+	</target>
+
+	<target name="distribution" depends="clean-all, compile-all, package-all" >
+		<copy file="${dist}/${target}/${dist-file-name}.jar" todir="${pslweb_home}/lib" overwrite="true">
+		</copy>
+		<copy file="${dist}/${target}/${dist-file-name}.jar" todir="${pslweb_home}/conf/lib-tmp" overwrite="true">
+		</copy>
+		<echo message="${dist}/${target}/${dist-file-name}.jar copied to ${pslweb_home}/lib"/>
+
+		<copy file="${dist}/${target}/${dist-file-name}.jar" todir="${pslorch_home}/lib" overwrite="true">
+		</copy>
+		<copy file="${dist}/${target}/${dist-file-name}.jar" todir="${pslorch_home}/conf/lib-tmp" overwrite="true">
+		</copy>
+		<echo message="${dist}/${target}/${dist-file-name}.jar copied to ${pslorch_home}/lib"/>
+	</target>
+
+	<target name="package-all" depends="compile-all">
+		<delete dir="${build}/archives/${target}" />
+		<jar destfile="${dist}/${target}/pslcommonobj-${version}.jar" basedir="${build}/classes">
+		</jar>
+	</target>
+
+	<!-- -->
+	<!-- ############################################################# -->
+	<!-- # [UPLOAD_TO_ARTIFACTORY]: upload_to_artifactory      # -->
+	<!-- ############################################################# -->
+	<!-- -->
+	<target name="upload_to_artifactory">
+		<exec executable="${jfrog.command.path}/jfrog.exe">
+			<arg line="rt u ${dist}/${target}/${dist-file-name}.jar ${artifactory.pslcommonobj.path}${version}/lib/${dist-file-name}.jar --user ${artifactory.user} --password ${artifactory.password} --url ${artifactory.repository.url}" />
+		</exec>
+	</target>
+
+</project>
